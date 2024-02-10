@@ -1,62 +1,108 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import Note from './components/Note'
+import noteService from './services/notes'
+import Notification from './components/Notification'
 
-const History = (props) => {
-  if (props.allClicks.length == 0) {
-    return (
-      <div>
-        the app is used by pressing the buttions
-      </div>
-    )
+const Footer = () => {
+  const footerStyle = {
+    color: 'green',
+    fontStyle: 'italic',
+    fontSize: 16
   }
 
   return (
-    <div>
-      button press history: {props.allClicks.join(' ')}
+    <div style={footerStyle}>
+      <br />
+      <em>Note app, Department of Computer Science, University of Helsinki 2024</em>
     </div>
   )
 }
 
-const Button = ({ handleClick, text }) => (
-  <button onClick={handleClick}>
-    {text}
-  </button>
-)
-
 const App = () => {
-  const [clicks, setClicks] = useState({
-    left: 0, right: 0
-  })
-  const [allClicks, setAll] = useState([])
-  const [total, setTotal] = useState(0)
+  const [notes, setNotes] = useState([])
+  const [newNote, setNewNote] = useState(null)
+  const [showAll, setShowAll] = useState(true)
+  const [errorMessage, setErrorMessage] = useState(null)
 
-  const handleLeftClick = () => {
-    const newClicks = {
-      ...clicks,
-      left: clicks.left + 1
+  useEffect(() => {
+    noteService
+      .getAll()
+      .then(initialNotes => {
+        setNotes(initialNotes)
+      })
+  }, [])
+
+  const addNote = (event) => {
+    event.preventDefault()
+    const noteObject = {
+      content: newNote,
+      important: Math.random() < 0.5
     }
-    setAll(allClicks.concat('L'))
-    setClicks(newClicks)
-    setTotal(newClicks.right + newClicks.left)
+
+    console.log(noteObject.id)
+
+    noteService
+      .create(noteObject)
+      .then(returnedNote => {
+        setNotes(notes.concat(returnedNote))
+        setNewNote('')
+      })    
   }
 
-  const handleRightClick = () => {
-    const newClicks = {
-      ...clicks,
-      right: clicks.right + 1
-    }
-    setAll(allClicks.concat('R'))
-    setClicks(newClicks)
-    setTotal(newClicks.right + newClicks.left)
+  const handleNoteChange = (event) => {
+    setNewNote(event.target.value)
   }
+
+  const toggleImportanceOf = (id) => {
+    const note = notes.find(n => n.id === id)
+    const changedNote = { ...note, important: !note.important }
+
+    noteService
+      .update(id, changedNote)
+      .then(returnedNote => {
+        setNotes(notes.map(n => n.id !== id ? n : returnedNote))
+      })
+      .catch(error => {
+        setErrorMessage(
+          `Note '${note.content}' was already removed from server`
+        )
+        setTimeout(() => {
+          setErrorMessage(null)
+        }, 5000)
+        setNotes(notes.filter(n => n.id !== id))
+      })
+  }
+
+  const notesToShow = showAll
+    ? notes
+    : notes.filter(note => note.important === true)
 
   return (
     <div>
-      {clicks.left}
-      <Button handleClick={handleLeftClick} text='left'/>
-      <Button handleClick={handleRightClick} text='right'/>
-      {clicks.right}
-      <History allClicks={allClicks}/>
-      <p>total {total}</p>
+      <h1>Notes</h1>
+      <Notification message={errorMessage}/>
+      <div>
+        <button onClick={() => setShowAll(!showAll)}>
+          show {showAll ? 'important' : 'all'}
+        </button>
+      </div>
+      <ul>
+        {notesToShow.map(note =>
+           <Note 
+            key={note.id}s 
+            note={note}
+            toggleImportance={() => toggleImportanceOf(note.id) }    
+          />
+        )}
+      </ul>
+      <form onSubmit={addNote}>
+        <input 
+          value={newNote}
+          onChange={handleNoteChange}
+        />
+        <button type="submit">save</button>
+      </form>
+      <Footer/>
     </div>
   )
 }
