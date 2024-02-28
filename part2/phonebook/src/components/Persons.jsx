@@ -9,7 +9,7 @@ const Persons = ({ people, setPersons }) => {
           .then(initialNumbers => {
             setPersons(initialNumbers)
           })
-      })
+      }, [])
 
     return (
         <div>
