@@ -1,5 +1,6 @@
 const express = require('express')
 const morgan = require('morgan')
+const cors = require('cors')
 const app = express()
 
 morgan.token('body', req => {
@@ -17,6 +18,8 @@ const conditionalLogger = (req, res, next) => {
 }
 
 app.use(conditionalLogger)
+
+app.use(cors())
 
 let persons = [
     { 
