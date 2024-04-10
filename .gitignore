@@ -31,3 +31,4 @@ typings/
 # Yarn Integrity file
 .yarn-integrity
 part2/countries/.env
+.env

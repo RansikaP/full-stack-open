@@ -1,6 +1,8 @@
+require('dotenv').config()
 const express = require('express')
 const app = express()
 const cors = require('cors')
+const Note = require('./models/note')
 
 app.use(express.json())
 
@@ -26,68 +28,45 @@ const generateId = () => {
     return maxID + 1
 }
 
-let notes = [
-  {
-    id: 1,
-    content: "HTML is easy",
-    important: true
-  },
-  {
-    id: 2,
-    content: "Browser can execute only JavaScript",
-    important: false
-  },
-  {
-    id: 3,
-    content: "GET and POST are the most important methods of HTTP protocol",
-    important: true
-  }
-]
-
 app.get('/', (request, response) => {
     response.send('<h1>Hello World!<h1>')
 })
 
 app.get('/api/notes', (request, response) => {
-    response.json(notes)
+    Note.find({}).then(notes => {
+        response.json(notes)
+    })
 })
 
 app.get('/api/notes/:id', (request, response) => {
-    const id = Number(request.params.id)
-    const note = notes.find(note => note.id === id)
-    
-    if (note) {
+    Note.findById(request.params.id).then(note => {
         response.json(note)
-    } else {
-        response.status(404).end()
-    }
+    })
 })
 
 app.delete('/api/notes/:id', (request, response) => {
-    const id = Number(request.param.id)
-    notes = notes.filter(note => note.id !== id)
-
-    response.status(204).end()
+    Note.findByIdAndDelete(request.params.id).then(note => {
+        response.json(note)
+    })
 })
 
 app.post('/api/notes', (request, response) => {
     const body = request.body
     
-    if (!body.content) {
+    if (body.content === undefined) {
         return response.status(400).json({
             error: 'content missing'
         })
     }
 
-    const note = {
+    const note = new Note({
         content: body.content,
-        important: Boolean(body.important) || false,
-        id: generateId(),
-    }
+        important: body.important || true,
+    })
 
-    notes = notes.concat(note)
-
-    response.json(note)
+    note.save().then(savedNote => {
+        response.json(note)
+    })
 })
 
 const unknownEndpoint = (request, response) => {
@@ -96,7 +75,7 @@ const unknownEndpoint = (request, response) => {
 
 app.use(unknownEndpoint)
 
-const PORT = process.env.PORT || 3001
+const PORT = process.env.PORT
 
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`)
